@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KOL情感分析雷达图</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: transparent;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #chart-container {
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+            min-width: 800px;
+        }
+        
+        #radarChart {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart-container">
+        <div id="radarChart"></div>
+    </div>
+
+    <script>
+        // 初始化ECharts实例
+        const chartDom = document.getElementById('radarChart');
+        const myChart = echarts.init(chartDom);
+        
+        // 图表配置
+        const option = {
+            color: ['#FFB6C1', '#FF69B4', '#DB7093', '#FF1493'],
+            title: {
+                text: 'KOL情感分析雷达图',
+                textStyle: {
+                    color: '#FF94A8',
+                    fontSize: 20,
+                    fontWeight: 'bold',
+                    fontFamily: 'Arial, sans-serif'
+                },
+                left: 'center',
+                top: 15,
+                padding: [5, 0]
+            },
+            
+            legend: {
+                data: ['理性支持派-KOL', '谨慎中立派-KOL', '现实担忧派-KOL'],
+                textStyle: {
+                    color: '#FF94A8',
+                    fontSize: 13,
+                    fontWeight: 'bold'
+                },
+                top: 55,
+                left: 'center',
+                itemGap: 25,
+                itemWidth: 12,
+                itemHeight: 12
+            },
+            
+            tooltip: {
+                trigger: 'item',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderColor: '#FF69B4',
+                borderWidth: 1,
+                textStyle: {
+                    color: '#FF1493',
+                    fontSize: 13,
+                    fontWeight: 'bold'
+                },
+                extraCssText: 'box-shadow: 0 6px 20px rgba(255, 105, 180, 0.3); border-radius: 8px; padding: 12px;',
+                
+                formatter: function(params) {
+                    // 创建高级悬浮提示
+                    const data = params.data || {};
+                    const name = params.name || '';
+                    const seriesName = params.seriesName || '';
+                    const value = params.value || [];
+                    
+                    // 指标名称
+                    const indicators = [
+                        '情感倾向(0-1)', '立场强度(0-1)', '案例类型(0-1)', 
+                        '数据支撑(0-1)', '情感表达(0-1)', '社会关怀(0-1)'
+                    ];
+                    
+                    // 创建星级评分显示
+                    let starHtml = '';
+                    const avgScore = value.reduce((a, b) => a + b, 0) / value.length;
+                    const starCount = Math.round(avgScore * 5);
+                    
+                    for (let i = 0; i < 5; i++) {
+                        if (i < starCount) {
+                            starHtml += '<span style="color:#FF1493; font-size:16px;">★</span>';
+                        } else {
+                            starHtml += '<span style="color:#FFB6C1; font-size:16px;">★</span>';
+                        }
+                    }
+                    
+                    // 创建进度条
+                    let detailHtml = '';
+                    indicators.forEach((indicator, index) => {
+                        const score = value[index] || 0;
+                        const percent = Math.round(score * 100);
+                        const color = score > 0.7 ? '#FF1493' : score > 0.4 ? '#FF69B4' : '#FFB6C1';
+                        
+                        detailHtml += `
+                            <div style="margin: 8px 0; display: flex; align-items: center;">
+                                <div style="width: 120px; color: #FF1493; font-weight: bold;">${indicator}</div>
+                                <div style="flex: 1; height: 8px; background: #FFE4E1; border-radius: 4px; margin: 0 10px; overflow: hidden;">
+                                    <div style="width: ${percent}%; height: 100%; background: ${color}; border-radius: 4px;"></div>
+                                </div>
+                                <div style="width: 40px; text-align: right; color: ${color}; font-weight: bold;">${score.toFixed(1)}</div>
+                            </div>
+                        `;
+                    });
+                    
+                    // 总评分
+                    const totalScore = value.reduce((a, b) => a + b, 0).toFixed(1);
+                    const maxScore = indicators.length;
+                    
+                    return `
+                        <div style="font-family: Arial, sans-serif;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-size: 16px; color: #FF1493; font-weight: bold;">${name}</div>
+                                <div style="font-size: 12px; color: #DB7093; background: #FFF0F5; padding: 4px 8px; border-radius: 10px;">
+                                    综合评分
+                                </div>
+                            </div>
+                            
+                            <div style="margin: 10px 0; text-align: center;">
+                                <div style="font-size: 28px; color: #FF1493; font-weight: bold; margin: 5px 0;">
+                                    ${avgScore.toFixed(2)}
+                                </div>
+                                <div style="font-size: 14px; color: #FF69B4; margin: 5px 0;">
+                                    ${starHtml}
+                                </div>
+                                <div style="font-size: 12px; color: #DB7093; margin-top: 5px;">
+                                    ${totalScore}/${maxScore} 分
+                                </div>
+                            </div>
+                            
+                            <div style="border-top: 1px dashed #FFB6C1; margin: 12px 0; padding-top: 12px;">
+                                <div style="font-size: 13px; color: #FF1493; margin-bottom: 8px; font-weight: bold;">
+                                    各维度详细评分：
+                                </div>
+                                ${detailHtml}
+                            </div>
+                            
+                            <div style="font-size: 11px; color: #C71585; text-align: right; margin-top: 10px; font-style: italic;">
+                                悬浮查看详细数据
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            
+            radar: {
+                indicator: [
+                    { text: '情感倾向', max: 1, color: '#FF94A8' },
+                    { text: '立场强度', max: 1, color: '#FF94A8' },
+                    { text: '案例类型', max: 1, color: '#FF94A8' },
+                    { text: '数据支撑', max: 1, color: '#FF94A8' },
+                    { text: '情感表达', max: 1, color: '#FF94A8' },
+                    { text: '社会关怀', max: 1, color: '#FF94A8' }
+                ],
+                center: ['50%', '58%'],
+                radius: '68%',
+                startAngle: 90,
+                splitNumber: 5,
+                shape: 'polygon',
+                
+                axisName: {
+                    formatter: '{value}',
+                    color: '#FF0000',
+                    fontSize: 12,
+                    fontWeight: 'bold',
+                    padding: [0, 0],
+                    textBorderColor: '#FFFFFF',
+                    textBorderWidth: 2
+                },
+                
+                splitArea: {
+                    areaStyle: {
+                        color: [
+                            'rgba(255,182,193,0.05)',
+                            'rgba(255,182,193,0.1)',
+                            'rgba(255,105,180,0.15)',
+                            'rgba(255,20,147,0.1)',
+                            'rgba(219,112,147,0.05)'
+                        ],
+                        shadowColor: 'rgba(255, 105, 180, 0.2)',
+                        shadowBlur: 8
+                    }
+                },
+                
+                axisLine: {
+                    lineStyle: {
+                        color: 'rgba(255,105,180,0.7)',
+                        width: 1.5
+                    }
+                },
+                
+                splitLine: {
+                    lineStyle: {
+                        color: 'rgba(255,105,180,0.5)',
+                        width: 1,
+                        type: 'dashed'
+                    }
+                }
+            },
+            
+            series: [
+                {
+                    type: 'radar',
+                    name: 'KOL分析',
+                    
+                    emphasis: {
+                        lineStyle: {
+                            width: 4,
+                            color: '#FF1493',
+                            shadowColor: 'rgba(255, 20, 147, 0.8)',
+                            shadowBlur: 10
+                        },
+                        areaStyle: {
+                            opacity: 0.8,
+                            shadowColor: 'rgba(255, 20, 147, 0.3)',
+                            shadowBlur: 15
+                        },
+                        itemStyle: {
+                            color: '#FFFFFF',
+                            borderColor: '#FF1493',
+                            borderWidth: 3,
+                            shadowColor: 'rgba(255, 20, 147, 0.5)',
+                            shadowBlur: 8
+                        }
+                    },
+                    
+                    data: [
+                        {
+                            value: [0.7, 0.8, 0.6, 0.7, 0.3, 0.5],
+                            name: '理性支持派-KOL',
+                            symbol: 'circle',
+                            symbolSize: 10,
+                            
+                            lineStyle: {
+                                color: '#fac03d',
+                                width: 2.5,
+                                type: 'solid'
+                            },
+                            
+                            areaStyle: {
+                                color: new echarts.graphic.RadialGradient(0.5, 0.5, 0.8, [
+                                    {
+                                        color: 'rgba(255, 182, 193, 0.4)',
+                                        offset: 0
+                                    },
+                                    {
+                                        color: 'rgba(255, 182, 193, 0.1)',
+                                        offset: 1
+                                    }
+                                ])
+                            },
+                            
+                            itemStyle: {
+                                color: '#fac03d',
+                                borderColor: '#FFFFFF',
+                                borderWidth: 2,
+                                shadowColor: 'rgba(255, 105, 180, 0.5)',
+                                shadowBlur: 5
+                            },
+                            
+                            label: {
+                                show: false,
+                                position: 'top',
+                                color: '#FF1493',
+                                fontWeight: 'bold',
+                                fontSize: 11,
+                                formatter: '{c}'
+                            }
+                        },
+                        
+                        {
+                            value: [0.5, 0.4, 0.8, 0.6, 0.4, 0.8],
+                            name: '谨慎中立派-KOL',
+                            symbol: 'diamond',
+                            symbolSize: 12,
+                            
+                            lineStyle: {
+                                color: '#b1d5c9',
+                                width: 2.5,
+                                type: 'solid'
+                            },
+                            
+                            areaStyle: {
+                                color: new echarts.graphic.RadialGradient(0.5, 0.5, 0.8, [
+                                    {
+                                        color: 'rgba(255, 105, 180, 0.4)',
+                                        offset: 0
+                                    },
+                                    {
+                                        color: 'rgba(255, 105, 180, 0.1)',
+                                        offset: 1
+                                    }
+                                ])
+                            },
+                            
+                            itemStyle: {
+                                color: '#b1d5c9',
+                                borderColor: '#FFFFFF',
+                                borderWidth: 2,
+                                shadowColor: 'rgba(219, 112, 147, 0.5)',
+                                shadowBlur: 5
+                            },
+                            
+                            label: {
+                                show: false,
+                                position: 'top',
+                                color: '#FF1493',
+                                fontWeight: 'bold',
+                                fontSize: 11
+                            }
+                        },
+                        
+                        {
+                            value: [0.3, 0.2, 0.5, 0.4, 0.6, 0.7],
+                            name: '现实担忧派-KOL',
+                            symbol: 'triangle',
+                            symbolSize: 12,
+                            
+                            lineStyle: {
+                                color: '#DB7093',
+                                width: 2.5,
+                                type: 'solid'
+                            },
+                            
+                            areaStyle: {
+                                color: new echarts.graphic.RadialGradient(0.5, 0.5, 0.8, [
+                                    {
+                                        color: 'rgba(219, 112, 147, 0.4)',
+                                        offset: 0
+                                    },
+                                    {
+                                        color: 'rgba(219, 112, 147, 0.1)',
+                                        offset: 1
+                                    }
+                                ])
+                            },
+                            
+                            itemStyle: {
+                                color: '#FF1493',
+                                borderColor: '#FFFFFF',
+                                borderWidth: 2,
+                                shadowColor: 'rgba(255, 20, 147, 0.5)',
+                                shadowBlur: 5
+                            },
+                            
+                            label: {
+                                show: false,
+                                position: 'top',
+                                color: '#FF1493',
+                                fontWeight: 'bold',
+                                fontSize: 11
+                            }
+                        }
+                    ]
+                }
+            ],
+            
+            grid: {
+                top: 100,
+                bottom: 30,
+                left: 60,
+                right: 60
+            },
+            
+            animation: true,
+            animationDuration: 1500,
+            animationEasing: 'cubicOut',
+            
+            // 添加响应式配置
+            media: [
+                {
+                    query: {
+                        maxWidth: 768
+                    },
+                    option: {
+                        radar: {
+                            radius: '55%',
+                            center: ['50%', '55%']
+                        },
+                        legend: {
+                            top: 60,
+                            itemGap: 15
+                        }
+                    }
+                }
+            ]
+        };
+
+        // 应用配置
+        myChart.setOption(option);
+        
+        // 响应窗口大小变化
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+    </script>
+</body>
+</html>
